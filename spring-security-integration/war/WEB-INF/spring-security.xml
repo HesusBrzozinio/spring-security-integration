@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:security="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+    http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.1.xsd">
+
+	<!-- This is where we configure Spring-Security -->	
+	<security:http pattern="/resources/nonsecured/**" security="none"/>
+	
+	<security:http auto-config="true" use-expressions="true" access-denied-page="/spring/auth/denied">
+		<security:intercept-url pattern="/spring/auth/login" access="permitAll" requires-channel="any" />
+		<security:intercept-url pattern="/spring/main/admin" access="hasRole('ROLE_ADMIN')" requires-channel="http" />
+		<security:intercept-url pattern="/spring/main/common" access="hasRole('ROLE_USER')" requires-channel="http" />
+		
+		<!-- default authentication handler config (remove it if auto-config="false" and you use custom authentication filters) -->
+		<security:form-login 
+		    login-page="/spring/auth/login" 
+		    authentication-failure-url="/spring/auth/login?error=true" 
+		    default-target-url="/spring/main/common" 
+		/>
+		
+		<security:logout 
+		    invalidate-session="true" 
+		    delete-cookies="JSESSIONID" 
+		    logout-success-url="/spring/auth/login" 
+		    logout-url="/spring/auth/logout" 
+		/>
+		
+		<security:port-mappings>
+     		<security:port-mapping http="8888" https="9443"/>
+    	</security:port-mappings>
+    	
+		<!-- OPTIONAL Session Fixation Attack Protection (Create a new "clean" session, without copying the existing session data) -->
+		<security:session-management session-fixation-protection="newSession" />
+	</security:http>
+
+	<!-- Declare an authentication-manager to use a custom userDetailsService -->
+	<security:authentication-manager>
+		<security:authentication-provider user-service-ref="customUserDetailsService">
+			<security:password-encoder ref="passwordEncoder" />
+		</security:authentication-provider>
+	</security:authentication-manager>
+
+	<!-- Use a Md5 encoder since the user's passwords are stored as Md5 in the database -->
+	<bean id="passwordEncoder" class="org.springframework.security.authentication.encoding.Md5PasswordEncoder" />
+
+	<!-- A custom service where Spring will retrieve users and their corresponding access levels -->
+	<bean id="customUserDetailsService" class="com.robico.security.service.CustomUserDetailsService" />
+</beans>
